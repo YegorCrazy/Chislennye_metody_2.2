@@ -1,0 +1,6 @@
+main
+del_me.c
+*.o
+*.gch
+*.exe
+*output
