@@ -96,11 +96,32 @@ unsigned leading_element (matrix *matr, unsigned n_st, unsigned m_aim) { //ме�
     return lead_indx;
 }
 
-void triangulate_matrix (matrix *matr, matrix *f) { //треугольный вид без выделения ведущего элемента
+void triangulate_matrix (matrix *matr, matrix *f, int *reverse) { //треугольный вид без выделения ведущего элемента
     unsigned m = matr->m;
     unsigned n = matr->n;
     long double **elem = matr->elem;
     for (unsigned i = 0; i < m; ++i) {
+        if (elem[i][i] == 0) {
+            if (reverse != NULL) *reverse += 1;
+            for (int j = i + 1; j < m; ++j) {
+                if (elem[i][j] != 0) {
+                    long double tmp;
+                    for (int k = 0; k < n; ++k) {
+                        tmp = elem[k][i];
+                        elem[k][i] = elem[k][j];
+                        elem[k][j] = tmp;
+                    }
+                    if (f != NULL) {
+                        tmp = f->elem[0][i];
+                        f->elem[0][i] = f->elem[0][j];
+                        f->elem[0][j] = tmp;
+                    }
+                    break;
+                }
+                printf("Matrix determinant equals zero\n\n");
+                exit(0);
+            }
+        }
         for (unsigned j = i + 1; j < m; ++j) {
             long double koef = elem[i][j] / elem[i][i];
             for (unsigned k = i; k < n; ++k) {
@@ -123,6 +144,26 @@ unsigned *triangulate_matrix_lead (matrix *matr, matrix *f) { //треуголь
         arr[i] = i;
     }
     for (unsigned i = 0; i < m; ++i) {
+        if (elem[i][i] == 0) {
+            for (int j = i + 1; j < m; ++j) {
+                if (elem[i][j] != 0) {
+                    long double tmp;
+                    for (int k = 0; k < n; ++k) {
+                        tmp = elem[k][i];
+                        elem[k][i] = elem[k][j];
+                        elem[k][j] = tmp;
+                    }
+                    if (f != NULL) {
+                        tmp = f->elem[0][i];
+                        f->elem[0][i] = f->elem[0][j];
+                        f->elem[0][j] = tmp;
+                    }
+                    break;
+                }
+                printf("Matrix determinant equals zero\n\n");
+                exit(0);
+            }
+        }
         swp = leading_element(matr, i, i);
         unsigned tmp = arr[i];
         arr[i] = arr[swp];
@@ -143,8 +184,10 @@ unsigned *triangulate_matrix_lead (matrix *matr, matrix *f) { //треуголь
 long double determinant (matrix *matr) { //поиск определителя
     unsigned n = matr->n;
     matrix *new = copy_matrix(matr);
-    triangulate_matrix(new, NULL);
+    int count = 0;
+    triangulate_matrix(new, NULL, &count);
     long double res = 1.0;
+    if (count % 2 == 1) res = -1.0;
     for (unsigned i = 0; i < n; ++i) {
         res *= (new->elem)[i][i];
     }
@@ -157,7 +200,7 @@ long double *gauss_method (matrix *A1, matrix *f1, int lead) { //метод Га
     matrix *f = copy_matrix(f1);
     unsigned *arr = NULL;
     if (lead == 0) {
-        triangulate_matrix(A, f);
+        triangulate_matrix(A, f, NULL);
     } else {
         arr = triangulate_matrix_lead(A, f);
     }

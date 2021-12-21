@@ -15,7 +15,7 @@ void print_matrix_ext (matrix *A, matrix *f);
 void read_matrix (FILE *input, matrix *matr);
 
 unsigned leading_element (matrix *matr, unsigned n_st, unsigned m_aim);
-void triangulate_matrix (matrix *matr, matrix *f);
+void triangulate_matrix (matrix *matr, matrix *f, int *reverse);
 unsigned *triangulate_matrix_lead (matrix *matr, matrix *f);
 
 long double determinant (matrix *matr);
