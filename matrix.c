@@ -80,154 +80,29 @@ void read_matrix (FILE *input, matrix *matr) { //чтение матрицы и�
     }
 }
 
-unsigned leading_element (matrix *matr, unsigned n_st, unsigned m_aim) { //менять местами столбцы для нахождения главного элемента
-    long double lead_el = 0;
-    unsigned lead_indx = 0;
-    unsigned n_fin = matr->n;
-    for (unsigned i = n_st; i < n_fin; ++i) {
-        if (abs_d((matr->elem)[i][m_aim]) > lead_el) {
-            lead_el = abs((matr->elem)[i][m_aim]);
-            lead_indx = i;
-        }
+long double *thomas_algo (matrix *A, matrix *f) {
+    // метод прогонки
+    int n = A->n;
+    long double *alpha = calloc(sizeof(*alpha), n - 1);
+    long double *beta = calloc(sizeof(*beta), n - 1);
+    // прямой ход
+    alpha[0] = -(A->elem)[1][0] / (A->elem)[0][0];
+    beta[0] = (f->elem)[0][0] / (A->elem)[0][0];
+    for (int i = 1; i < n - 1; ++i) {
+        long double y = alpha[i - 1] * (A->elem)[i - 1][i] + (A->elem)[i][i];
+        alpha[i] = - (A->elem)[i + 1][i] / y;
+        beta[i] = ((f->elem)[0][i] - beta[i - 1] * (A->elem)[i - 1][i]) / y;
     }
-    long double *tmp = (matr->elem)[n_st];
-    (matr->elem)[n_st] = (matr->elem)[lead_indx];
-    (matr->elem)[lead_indx] = tmp;
-    return lead_indx;
-}
-
-void triangulate_matrix (matrix *matr, matrix *f, int *reverse) { //треугольный вид без выделения ведущего элемента
-    unsigned m = matr->m;
-    unsigned n = matr->n;
-    long double **elem = matr->elem;
-    for (unsigned i = 0; i < m; ++i) {
-        if (elem[i][i] == 0) {
-            if (reverse != NULL) *reverse += 1;
-            for (int j = i + 1; j < m; ++j) {
-                if (elem[i][j] != 0) {
-                    long double tmp;
-                    for (int k = 0; k < n; ++k) {
-                        tmp = elem[k][i];
-                        elem[k][i] = elem[k][j];
-                        elem[k][j] = tmp;
-                    }
-                    if (f != NULL) {
-                        tmp = f->elem[0][i];
-                        f->elem[0][i] = f->elem[0][j];
-                        f->elem[0][j] = tmp;
-                    }
-                    break;
-                }
-                printf("Matrix determinant equals zero\n\n");
-                exit(0);
-            }
-        }
-        for (unsigned j = i + 1; j < m; ++j) {
-            long double koef = elem[i][j] / elem[i][i];
-            for (unsigned k = i; k < n; ++k) {
-                elem[k][j] -= elem[k][i] * koef;
-            }
-            if (f != NULL) {
-                (f->elem)[0][j] -= (f->elem)[0][i] * koef;
-            }
-        }
+    // обратный ход
+    long double *ans = calloc(sizeof(*ans), n);
+    ans[n - 1] = ((f->elem)[0][n - 1] - (A->elem)[n - 2][n - 1] * beta[n - 2]) / 
+        ((A->elem)[n - 2][n - 1] * alpha[n - 2] + (A->elem)[n - 1][n - 1]);
+    for (int i = n - 2; i >= 0; --i) {
+        ans[i] = alpha[i] * ans[i + 1] + beta[i];
     }
+    free(alpha);
+    free(beta);
+    return ans;
 }
     
-unsigned *triangulate_matrix_lead (matrix *matr, matrix *f) { //треугольный вид с выделением ведущего элемента
-    unsigned m = matr->m;
-    unsigned n = matr->n;
-    long double **elem = matr->elem;
-    unsigned swp;
-    unsigned *arr = malloc(n * sizeof(unsigned));
-    for (unsigned i = 0; i < n; ++i) {
-        arr[i] = i;
-    }
-    for (unsigned i = 0; i < m; ++i) {
-        if (elem[i][i] == 0) {
-            for (int j = i + 1; j < m; ++j) {
-                if (elem[i][j] != 0) {
-                    long double tmp;
-                    for (int k = 0; k < n; ++k) {
-                        tmp = elem[k][i];
-                        elem[k][i] = elem[k][j];
-                        elem[k][j] = tmp;
-                    }
-                    if (f != NULL) {
-                        tmp = f->elem[0][i];
-                        f->elem[0][i] = f->elem[0][j];
-                        f->elem[0][j] = tmp;
-                    }
-                    break;
-                }
-                printf("Matrix determinant equals zero\n\n");
-                exit(0);
-            }
-        }
-        swp = leading_element(matr, i, i);
-        unsigned tmp = arr[i];
-        arr[i] = arr[swp];
-        arr[swp] = tmp;
-        for (unsigned j = i + 1; j < m; ++j) {
-            long double koef = elem[i][j] / elem[i][i];
-            for (unsigned k = i; k < n; ++k) {
-                elem[k][j] -= elem[k][i] * koef;
-            }
-            if (f != NULL) {
-                (f->elem)[0][j] -= (f->elem)[0][i] * koef;
-            }
-        }
-    }
-    return arr;
-}
-
-long double determinant (matrix *matr) { //поиск определителя
-    unsigned n = matr->n;
-    matrix *new = copy_matrix(matr);
-    int count = 0;
-    triangulate_matrix(new, NULL, &count);
-    long double res = 1.0;
-    if (count % 2 == 1) res = -1.0;
-    for (unsigned i = 0; i < n; ++i) {
-        res *= (new->elem)[i][i];
-    }
-    delete_matrix(new);
-    return res;
-}
-
-long double *gauss_method (matrix *A1, matrix *f1, int lead) { //метод Гаусса
-    matrix *A = copy_matrix(A1);
-    matrix *f = copy_matrix(f1);
-    unsigned *arr = NULL;
-    if (lead == 0) {
-        triangulate_matrix(A, f, NULL);
-    } else {
-        arr = triangulate_matrix_lead(A, f);
-    }
-    unsigned m = A->m;
-    unsigned n = A->n;
-    long double *roots_raw = calloc(n, sizeof(long double)); //тут немного разнятся коэффиценты, но при m = n все хорошо
-    for (unsigned i = m - 1; ; --i) {
-        roots_raw[i] = ((f->elem)[0][i]);
-        for (unsigned j = i + 1; j < n; ++j) {
-            roots_raw[i] -= roots_raw[j] * (A->elem)[j][i];
-        }
-        roots_raw[i] /= (A->elem)[i][i];
-        if (i == 0) break;
-    }
-    delete_matrix(A);
-    delete_matrix(f);
-    if (lead == 0) return roots_raw;
-    long double *roots = calloc(n, sizeof(long double));
-    for (unsigned i = 0; i < n; ++i) {
-        for (unsigned j = 0; j < n; ++j) {
-            if (arr[j] == i) {
-                roots[i] = roots_raw[j];
-                break;
-            }
-        }
-    }
-    free(arr);
-    free(roots_raw);
-    return roots;
-}
+        

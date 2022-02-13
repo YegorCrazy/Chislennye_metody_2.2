@@ -6,7 +6,7 @@
 
 enum
 {
-    N = 100
+    N = 500
 };
 
 int main (int argc, char *argv[]) {
@@ -29,6 +29,8 @@ int main (int argc, char *argv[]) {
     long double (*p) (long double);
     long double (*q) (long double);
     long double (*f) (long double);
+    long double (*real) (long double);
+    int real_fl = 0;
     
     if (strtol(argv[1], NULL, 10) == 9) {
         var_9 (&sigma1,
@@ -54,6 +56,34 @@ int main (int argc, char *argv[]) {
             &p,
             &q,
             &f);
+    } else if (strtol(argv[1], NULL, 10) == -1) {
+        var_t1 (&sigma1,
+            &sigma2,
+            &gamma1,
+            &gamma2,
+            &delta1,
+            &delta2,
+            &x0,
+            &xn,
+            &p,
+            &q,
+            &f);
+        real = t1_real;
+        real_fl = 1;
+    } else if (strtol(argv[1], NULL, 10) == -2) {
+        var_t2 (&sigma1,
+            &sigma2,
+            &gamma1,
+            &gamma2,
+            &delta1,
+            &delta2,
+            &x0,
+            &xn,
+            &p,
+            &q,
+            &f);
+        real = t2_real;
+        real_fl = 1;
     } else {
         printf("Invalid function number\n");
         return 0;
@@ -80,7 +110,13 @@ int main (int argc, char *argv[]) {
     }
     
     long double *ans;
-    ans = gauss_method(A, fm, 1);
+    //ans = gauss_method(A, fm, 1);
+    ans = thomas_algo(A, fm);
+    
+    if (real_fl == 1) {
+        long double err = q_err(ans, x0, N, h, real);
+        printf("Quadratic error is %Lf\n", err);
+    }
     
     printf("Started making plot...\n");
     
